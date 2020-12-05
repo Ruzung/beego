@@ -9,7 +9,7 @@ developer-v1.12.1-dm
 * 在使用自定义struct的时候，需要在结构体后，json或者orm定义字段与数据库字段一样，否则无法识别导致字段无法获取或者插入更新。
 ```go
 type json struct {
-    ResourceId int         `json:"resource_id"`
+    ResourceId     int         `json:"resource_id"`
     CpuRate        interface{} `json:"cpu_rate"`
     MemoryRate     interface{} `json:"memory_rate"`
     DiskRate       interface{} `json:"disk_rate"`
