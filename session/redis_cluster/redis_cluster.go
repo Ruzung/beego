@@ -20,8 +20,8 @@
 //
 // Usage:
 // import(
-//   _ "github.com/astaxie/beego/session/redis_cluster"
-//   "github.com/astaxie/beego/session"
+//   _ "github.com/Ruzung/beego/session/redis_cluster"
+//   "github.com/Ruzung/beego/session"
 // )
 //
 //	func init() {
@@ -33,7 +33,7 @@
 package redis_cluster
 
 import (
-	"github.com/astaxie/beego/session"
+	"github.com/Ruzung/beego/session"
 	rediss "github.com/go-redis/redis"
 	"net/http"
 	"strconv"
