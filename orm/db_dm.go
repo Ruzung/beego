@@ -68,6 +68,8 @@ var dmKeywordsTolowTypes = map[string]bool{
 	`"FORMAT"`:   true,
 	`"MODE"`:     true,
 	`"NODE"`:     true,
+	`"GROUP"`:    true,
+	`"LEVEL"`:    true,
 }
 
 // dm Reserved keywords  预留关键字适配
@@ -85,6 +87,8 @@ var dmKeywordsToUpperTypes = map[string]bool{
 	"fromat":   true,
 	"mode":     true,
 	"node":     true,
+	"group":    true,
+	"level":    true,
 }
 
 // dm dbBaser
@@ -163,8 +167,6 @@ func (d *dbBasedm) collectValues(mi *modelInfo, ind reflect.Value, cols []string
 func (d *dbBasedm) setColsValues(mi *modelInfo, ind *reflect.Value, cols []string, values []interface{}, tz *time.Location) {
 	for i, column := range cols {
 		val := reflect.Indirect(reflect.ValueOf(values[i])).Interface()
-
-		// 处理DM预留关键字
 
 		if dmKeywordsTolowTypes[column] {
 			column = strings.ToLower(strings.Replace(column, `"`, ``, -1))
@@ -325,7 +327,6 @@ func (d *dbBasedm) ReadBatch(q dbQuerier, qs *querySet, mi *modelInfo, cond *Con
 	} else {
 		tCols = mi.fields.dbcols
 	}
-	// 处理 DM 关键字
 	for i, col := range tCols {
 		if dmKeywordsToUpperTypes[col] {
 			tCols[i] = `"` + strings.ToUpper(col) + `"`
@@ -518,7 +519,6 @@ func (d *dbBasedm) IndexExists(db dbQuerier, table string, name string) bool {
 	return cnt > 0
 }
 
-//  适配DM 插入 关键字
 // execute insert sql dbQuerier with given struct reflect.Value.
 func (d *dbBasedm) Insert(q dbQuerier, mi *modelInfo, ind reflect.Value, tz *time.Location) (int64, error) {
 	names := make([]string, 0, len(mi.fields.dbcols))
@@ -538,7 +538,6 @@ func (d *dbBasedm) Insert(q dbQuerier, mi *modelInfo, ind reflect.Value, tz *tim
 	return id, err
 }
 
-// 适配DM更新
 // execute update sql dbQuerier with given struct reflect.Value.
 
 func (d *dbBasedm) Update(q dbQuerier, mi *modelInfo, ind reflect.Value, tz *time.Location, cols []string) (int64, error) {
@@ -565,7 +564,6 @@ func (d *dbBasedm) Update(q dbQuerier, mi *modelInfo, ind reflect.Value, tz *tim
 	var findAutoNowAdd, findAutoNow bool
 	var index int
 	for i, col := range setNames {
-		// DM适配关键字
 		if dmKeywordsTolowTypes[col] {
 			col = strings.ToLower(strings.Replace(col, `"`, ``, -1))
 		}
