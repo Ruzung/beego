@@ -17,6 +17,12 @@ type json struct {
     Message        string      `json:"message"`
 }
 ```
+* 在使用在定义struct时候，必须在orm中进行注册
+```go
+func init() {
+	orm.RegisterModel(new(Host))
+}
+```
 * 在使用自定义sql，Row去执行的时候，一定要把dm关键字大写，并用双引号引起来。
 * 在使用自定义sql，Row去执行的时候，一定不能带有 ` 
 
