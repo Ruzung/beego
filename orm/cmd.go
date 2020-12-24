@@ -135,9 +135,13 @@ func (d *commandSyncDb) Run() error {
 	}
 
 	for i, mi := range modelCache.allOrdered() {
-		if tables[mi.table] {
+		tablename := mi.table
+		if tables[tablename] || tables[strings.ToUpper(tablename)] {
 			if !d.noInfo {
 				fmt.Printf("table `%s` already exists, skip\n", mi.table)
+				if d.al.Driver == DRDM {
+					continue
+				}
 			}
 
 			var fields []*fieldInfo
@@ -214,6 +218,7 @@ func (d *commandSyncDb) Run() error {
 			}
 			if err != nil {
 				if d.rtOnError {
+					fmt.Printf("    %s\n", err.Error())
 					return err
 				}
 				fmt.Printf("    %s\n", err.Error())

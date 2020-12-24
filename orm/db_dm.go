@@ -35,7 +35,7 @@ var dmOperators = map[string]string{
 // dm column field types.
 var dmTypes = map[string]string{
 	"pk":              "NOT NULL PRIMARY KEY",
-	"bool":            "bool",
+	"bool":            "TINYINT",
 	"string":          "VARCHAR2(%d)",
 	"string-char":     "CHAR(%d)",
 	"string-text":     "VARCHAR2(%d)",
@@ -53,7 +53,7 @@ var dmTypes = map[string]string{
 	"float64-decimal": "NUMBER(%d, %d)",
 }
 
-// dm Reserved keywords  预留关键字适配
+// songwei dm Reserved keywords  预留关键字适配
 var dmKeywordsTolowTypes = map[string]bool{
 	`"ORDER"`:    true,
 	`"USAGE"`:    true,
@@ -68,11 +68,9 @@ var dmKeywordsTolowTypes = map[string]bool{
 	`"FORMAT"`:   true,
 	`"MODE"`:     true,
 	`"NODE"`:     true,
-	`"GROUP"`:    true,
-	`"LEVEL"`:    true,
 }
 
-// dm Reserved keywords  预留关键字适配
+// songwei dm Reserved keywords  预留关键字适配
 var dmKeywordsToUpperTypes = map[string]bool{
 	"order":    true,
 	"usage":    true,
@@ -87,8 +85,6 @@ var dmKeywordsToUpperTypes = map[string]bool{
 	"fromat":   true,
 	"mode":     true,
 	"node":     true,
-	"group":    true,
-	"level":    true,
 }
 
 // dm dbBaser
@@ -112,7 +108,7 @@ func (d *dbBasedm) TableQuote() string {
 
 }
 
-// DM适配 关键字
+//songwei DM适配 关键字
 // get struct columns values as interface slice.
 
 func (d *dbBasedm) collectValues(mi *modelInfo, ind reflect.Value, cols []string, skipAuto bool, insert bool, names *[]string, tz *time.Location) (values []interface{}, autoFields []string, err error) {
@@ -152,7 +148,7 @@ func (d *dbBasedm) collectValues(mi *modelInfo, ind reflect.Value, cols []string
 			autoFields = append(autoFields, fi.column)
 		}
 
-		// 适配DM 关键字添加
+		//songwei 适配DM 关键字添加
 		if dmKeywordsToUpperTypes[column] {
 			column = `"` + strings.ToUpper(column) + `"`
 		}
@@ -163,10 +159,12 @@ func (d *dbBasedm) collectValues(mi *modelInfo, ind reflect.Value, cols []string
 	return
 }
 
-// 从写db.go 中的setColsValues 方法适配DM 关键字
+//songwei 从写db.go 中的setColsValues 方法适配DM 关键字
 func (d *dbBasedm) setColsValues(mi *modelInfo, ind *reflect.Value, cols []string, values []interface{}, tz *time.Location) {
 	for i, column := range cols {
 		val := reflect.Indirect(reflect.ValueOf(values[i])).Interface()
+
+		//songwei 处理DM预留关键字
 
 		if dmKeywordsTolowTypes[column] {
 			column = strings.ToLower(strings.Replace(column, `"`, ``, -1))
@@ -327,6 +325,7 @@ func (d *dbBasedm) ReadBatch(q dbQuerier, qs *querySet, mi *modelInfo, cond *Con
 	} else {
 		tCols = mi.fields.dbcols
 	}
+	//songwei 处理 DM 关键字
 	for i, col := range tCols {
 		if dmKeywordsToUpperTypes[col] {
 			tCols[i] = `"` + strings.ToUpper(col) + `"`
@@ -519,6 +518,7 @@ func (d *dbBasedm) IndexExists(db dbQuerier, table string, name string) bool {
 	return cnt > 0
 }
 
+// songwei 适配DM 插入 关键字
 // execute insert sql dbQuerier with given struct reflect.Value.
 func (d *dbBasedm) Insert(q dbQuerier, mi *modelInfo, ind reflect.Value, tz *time.Location) (int64, error) {
 	names := make([]string, 0, len(mi.fields.dbcols))
@@ -538,6 +538,7 @@ func (d *dbBasedm) Insert(q dbQuerier, mi *modelInfo, ind reflect.Value, tz *tim
 	return id, err
 }
 
+//songwei 适配DM更新
 // execute update sql dbQuerier with given struct reflect.Value.
 
 func (d *dbBasedm) Update(q dbQuerier, mi *modelInfo, ind reflect.Value, tz *time.Location, cols []string) (int64, error) {
@@ -564,6 +565,7 @@ func (d *dbBasedm) Update(q dbQuerier, mi *modelInfo, ind reflect.Value, tz *tim
 	var findAutoNowAdd, findAutoNow bool
 	var index int
 	for i, col := range setNames {
+		//songwei DM适配关键字
 		if dmKeywordsTolowTypes[col] {
 			col = strings.ToLower(strings.Replace(col, `"`, ``, -1))
 		}
@@ -607,3 +609,52 @@ func (d *dbBasedm) Update(q dbQuerier, mi *modelInfo, ind reflect.Value, tz *tim
 	}
 	return 0, err
 }
+
+// execute insert sql with given struct and given values.
+// insert the given values, not the field values in struct.
+/*
+func (d *dbBasedm) InsertValue(q dbQuerier, mi *modelInfo, isMulti bool, names []string, values []interface{}) (int64, error) {
+	Q := d.ins.TableQuote()
+
+	marks := make([]string, len(names))
+	for i := range marks {
+		marks[i] = ":" + names[i]
+	}
+
+	for i := range names {
+		//songwei 适配DM 关键字添加
+		if dmKeywordsToUpperTypes[names[i]] {
+			names[i] = `"` + strings.ToUpper(names[i]) + `"`
+		}
+	}
+
+	sep := fmt.Sprintf("%s, %s", Q, Q)
+	qmarks := strings.Join(marks, ", ")
+	columns := strings.Join(names, sep)
+
+	multi := len(values) / len(names)
+
+	if isMulti {
+		qmarks = strings.Repeat(qmarks+"), (", multi-1) + qmarks
+	}
+
+	query := fmt.Sprintf("INSERT INTO %s%s%s (%s%s%s) VALUES (%s)", Q, mi.table, Q, Q, columns, Q, qmarks)
+
+	d.ins.ReplaceMarks(&query)
+
+	if isMulti || !d.ins.HasReturningID(mi, &query) {
+		res, err := q.Exec(query, values...)
+		if err == nil {
+			if isMulti {
+				return res.RowsAffected()
+			}
+			return res.LastInsertId()
+		}
+		return 0, err
+	}
+	row := q.QueryRow(query, values...)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+*/

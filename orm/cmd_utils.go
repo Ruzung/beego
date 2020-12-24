@@ -150,16 +150,26 @@ func getDbCreateSQL(al *alias) (sqls []string, tableIndexes map[string][]dbIndex
 		sql := fmt.Sprintf("-- %s\n", strings.Repeat("-", 50))
 		sql += fmt.Sprintf("--  Table Structure for `%s`\n", mi.fullName)
 		sql += fmt.Sprintf("-- %s\n", strings.Repeat("-", 50))
-
-		sql += fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s%s%s (\n", Q, mi.table, Q)
-
+		sqltmp := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s%s%s (\n", Q, mi.table, Q)
+		if al.Driver == DRDM {
+			sqltmp = fmt.Sprintf("CREATE TABLE %s%s%s (\n", Q, mi.table, Q)
+		}
+		sql += sqltmp
 		columns := make([]string, 0, len(mi.fields.fieldsDB))
 
 		sqlIndexes := [][]string{}
-
+		if mi.table == "resource_node" {
+			fmt.Sprintf("CREATE TABLE resource_node")
+		}
 		for _, fi := range mi.fields.fieldsDB {
-
-			column := fmt.Sprintf("    %s%s%s ", Q, fi.column, Q)
+			tmpcolumn := fmt.Sprintf("    %s%s%s ", Q, fi.column, Q)
+			if al.Driver == DRDM {
+				if dmKeywordsToUpperTypes[fi.column] {
+					l := `"` + strings.ToUpper(fi.column) + `"`
+					tmpcolumn = fmt.Sprintf("    %s%s%s ", Q, l, Q)
+				}
+			}
+			column := tmpcolumn
 			col := getColumnTyp(al, fi)
 
 			if fi.auto {
@@ -185,7 +195,7 @@ func getDbCreateSQL(al *alias) (sqls []string, tableIndexes map[string][]dbIndex
 				// Append attribute DEFAULT
 				column += getColumnDefault(fi)
 
-				if fi.unique {
+				if fi.unique && al.Driver != DRDM {
 					column += " " + "UNIQUE"
 				}
 
