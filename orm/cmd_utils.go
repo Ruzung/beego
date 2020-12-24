@@ -158,9 +158,6 @@ func getDbCreateSQL(al *alias) (sqls []string, tableIndexes map[string][]dbIndex
 		columns := make([]string, 0, len(mi.fields.fieldsDB))
 
 		sqlIndexes := [][]string{}
-		if mi.table == "resource_node" {
-			fmt.Sprintf("CREATE TABLE resource_node")
-		}
 		for _, fi := range mi.fields.fieldsDB {
 			tmpcolumn := fmt.Sprintf("    %s%s%s ", Q, fi.column, Q)
 			if al.Driver == DRDM {
